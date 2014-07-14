@@ -32,11 +32,11 @@ public class BPNN {
     private double[] oNodes;    // The output nodes values
     private double[] hSum;      // Summation for hidden nodes
     private double[] oSum;      // Summation for output nodes
-    private double[] oDeltas;   // The output nodes deltas
-    private double[] hDeltas;   // The hidden nodes deltas
+    private double[] oDeltas;   // The output nodes error-deltas
+    private double[] hDeltas;   // The hidden nodes error-deltas
     private double[] yNodes;    // The output ground truth values
-    private double[] oPrime;    // The derivative of the error for the output nodes
-    private double[] hPrime;    // The derivative of the error for the hidden nodes
+    private double[] oPrime;    // The f' for the error for the output nodes
+    private double[] hPrime;    // The f' for the error for the hidden nodes
     private double[] oPartial;  // Partial derivative from the output layer
     private double[] hPartial;  // Partial derivative from the hidden layer
     private final double e = 2.7182818284590452353602875;
@@ -314,6 +314,7 @@ public class BPNN {
     // Function to compute a back step
     private void backProp()
     {
+        // Here we calculate a step for the gradient descent
         this.computeODeltas();
         this.computeHDeltas();
         this.computeOPartial();
@@ -324,18 +325,31 @@ public class BPNN {
         this.updateWih();
     }
     
+    // Read a training file {x1,x2,x3,...,xn,yi}
     private void readTrainingSet()
     {
         
     }
+    
+    // Read a testing file {x1,x2,x3,...,xn,yi}
+    private void readTestingSet()
+    {
+        
+    }
+    
     
     private void trainBP()
     {
         
     }
     
+    private void testBP()
+    {
+        
+    }
+    
     public static void main(String[] args) {
-        // TODO code application logic here
+        // Create a BPNN new objectas
         BPNN myNN = new BPNN(3,2,1,0.05);
         myNN.printMatrix(myNN.Wih, myNN.nInput, myNN.nHidden);
         myNN.printMatrix(myNN.Who, myNN.nHidden, myNN.nOutput);
