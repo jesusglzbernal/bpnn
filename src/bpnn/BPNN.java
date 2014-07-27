@@ -46,13 +46,13 @@ public class BPNN {
 
     
     // Class constructor, initializes the neural network architecture and working steps
-    BPNN(int iN, int hN, int oN, double lR)
+    BPNN(int iN, int hN, int oN, double learningRate)
     {
         this.nInput = iN;
         this.nHidden = hN;
         this.nOutput = oN;
-        this.alpha = 0.0;
-        this.lambda = 0.05;
+        this.alpha = learningRate;
+        this.lambda = 0.1;
         this.numSamples = 0;
         this.Wih = new double[iN][hN];
         this.Wih = initMatrix(Wih, iN, hN);
@@ -67,9 +67,9 @@ public class BPNN {
         WhoP = new double[hN][oN];
         WhoP = ceroMatrix(WhoP, hN, oN);
         WihC = new double[iN][hN];
-        WihC = initMatrix(WihC,0,0);
+        WihC = ceroMatrix(WihC,iN,hN);
         WhoC = new double[hN][oN];
-        WhoC = initMatrix(WhoC,0,0);
+        WhoC = ceroMatrix(WhoC,hN,oN);
         iNodes = new double[iN];
         hNodes = new double[hN];
         oNodes = new double[oN];
@@ -99,7 +99,7 @@ public class BPNN {
         {
             for(j = 0; j < b; j++)
             {
-                matrix[i][j] = nextDouble(r, 0.01, 0.2);
+                matrix[i][j] = nextDouble(r, -0.1, 0.1);
             }
         }
         return matrix;
@@ -120,6 +120,29 @@ public class BPNN {
         return matrix;
     }
 
+    
+    
+    private void ceroCMatrices()
+    {
+        int i, j;
+        
+        for(i = 0; i < nHidden; i++)
+        {
+            for(j = 0; j < nOutput; j++)
+            {
+                this.WhoC[i][j] = 0.0;
+            }
+        }
+        
+        for(i = 0; i < nInput; i++)
+        {
+            for(j = 0; j < nHidden; j++)
+            {
+                this.WihC[i][j] = 0.0;
+            }
+        }
+    }
+    
     // Function to make a copy of the weights matrices for momemtum
     // Wih --> WihP
     // Who --> WhoP
@@ -210,7 +233,13 @@ public class BPNN {
     // Returns the value of the sigmoid function applied to a value
     private double sigmoid(double myVal)
     {
-        return (double)1/(1 + Math.pow(e, myVal));
+        //return (double)1/(1 + Math.pow(e, myVal));
+        return Math.tanh(myVal);
+    }
+    
+    private double dsigmoid(double myVal)
+    {
+        return 1 - Math.pow(myVal,2);
     }
     
     
@@ -292,18 +321,21 @@ public class BPNN {
     {
         for(int i = 0; i < this.nOutput; i++)
         {
-            this.oDeltas[i] = -(getIndError(this.oNodes[i],this.yNodes[i])) * this.oNodes[i] * (1 - this.oNodes[i]);
+            this.oDeltas[i] = -(getIndError(this.oNodes[i],this.yNodes[i])) * dsigmoid(this.oNodes[i]);
         }
     }
     
     // Function to compute the Output Weights Gradients
-    public void computeOutputWGradients()
+    public void updateOutputWeights()
     {
+        double change = 0.0;
         for(int i = 0; i < this.nHidden; i++)
         {
             for(int j = 0; j < this.nOutput; j++)
             {
-                this.WhoC[i][j] = this.WhoC[i][j] + this.oDeltas[j] * this.hNodes[i];
+                change = this.oDeltas[j] * this.hNodes[i];
+                this.Who[i][j] = this.Who[i][j] + this.alpha * change + this.lambda * WhoP[i][j];
+                this.WhoP[i][j] = change;
             }
         }
     }
@@ -314,54 +346,50 @@ public class BPNN {
     {
         for(int i = 0; i < this.nHidden; i++)
         {
+            double sum = 0.0;
+            this.hDeltas[i] = dsigmoid(this.hSum[i]);
             for(int j = 0; j < this.nOutput; j++)
             {
-                this.hDeltas[i] = this.hSum[i] * (1 - this.hSum[i]) * this.oDeltas[j] * this.Who[i][j];
+                sum = sum + this.oDeltas[j] * this.Who[i][j];
             }
+            this.hDeltas[i] = this.hDeltas[i] * sum;
         }
     }
     
     // Function to compute the input to hidden Weights Gradients
-    public void computeHiddenWGradients()
+    public void updateInputWeights()
     {
+        double change = 0.0;
         for(int i = 0; i < this.nInput; i++)
         {
             for(int j = 0; j < this.nHidden; j++)
             {
-                this.WihC[i][j] = this.WihC[i][j] + this.hDeltas[j] * this.iNodes[i];
-            }
+                change = this.hDeltas[j] * this.iNodes[i];
+                this.Wih[i][j] = this.Wih[i][j] + this.alpha * change + this.lambda * WihP[i][j];
+                this.WihP[i][j] = change;
+            }   
         }
     }
     
-    // Function to compute the hidden to output weights deltas -- the change to be done to the weights
-    // Stored in WhoD
-    // Keep the summation for an itteration for batch learning
-    public void computeHOWeightDeltas()
+
+    
+    public void changeWeights()
     {
         for(int i = 0; i < nHidden; i++)
         {
             for(int j = 0; j < nOutput; j++)    
             {
-                this.WhoD[i][j] = this.alpha * this.WhoC[i][j] + this.lambda * this.WhoP[i][j];
-                this.Who[i][j] = this.Who[i][j] - this.WhoD[i][j];
+                this.Who[i][j] = this.Who[i][j] + this.alpha * this.WhoC[i][j] + this.lambda * this.WhoP[i][j];
             }
         }
-    }
-    // Function to compute the input to hidden weights deltas -- the change to done to the weights
-    // Stored in WihD
-    // Keep the summation for an itteration for batch learning
-    public void computeIHWeightDeltas()
-    {
         for(int i = 0; i < nInput; i++)
         {
             for(int j = 0; j < nHidden; j++)
             {
-                this.WihD[i][j] = this.alpha * this.WihC[i][j] + this.lambda * this.WihP[i][j];
-                this.Wih[i][j] = this.Wih[i][j] - this.WihD[i][j];
+                this.Wih[i][j] = this.Wih[i][j] + this.alpha * this.WihC[i][j] + this.lambda * this.WihP[i][j];
             }
         }
     }
-    
 
     
     // Function to compute a back step
@@ -370,8 +398,10 @@ public class BPNN {
         // Here we calculate a step for the gradient descent
         this.computeOutputDeltas();
         this.computeHiddenDeltas();
-        this.computeOutputWGradients();
-        this.computeHiddenWGradients();
+        this.updateOutputWeights();
+        this.updateInputWeights();
+        //this.changeWeights();
+        //this.copyW();
     }
     
     
@@ -412,42 +442,56 @@ public class BPNN {
         ArrayList<String> ySet;
         xSet = dSet.getXSet();
         ySet = dSet.getYSet();
-        double sumError = 0.0;
+        double sumError;
         double[] yOutput = new double[nOutput];
         
         for(int i = 0; i < iter; i++)
         {
             sumError = 0.0;
-            WhoD = ceroMatrix(WhoD, nHidden, nOutput);
-            WihD = ceroMatrix(WihD, nInput, nHidden);
+            //ceroCMatrices();
             for(int j = 0; j < xSet.size(); j++)
             {
                 yOutput = getDoubleOutput(Double.parseDouble(ySet.get(j)));
                 forwardStep(xSet.get(j), yOutput);
                 backProp();
-                sumError = sumError + getError(yOutput,oNodes);
+                sumError = sumError + getError(this.oNodes,yOutput);
             }
-            computeHOWeightDeltas();
-            computeIHWeightDeltas();
-            copyW();
+            //changeWeights();
+            //copyW();
+            //if(i%100 == 0)
+            //{
             System.out.println("Error: " + sumError);
+            //}
         }
     }
     
-    private void testBP()
+    private void testBP(readSamples dSet)
     {
+        ArrayList<ArrayList<String>> xSet;
+        ArrayList<String> ySet;
+        xSet = dSet.getXSet();
+        ySet = dSet.getYSet();
+        double[] yOutput = new double[nOutput];
         
+        for(int j = 0; j < xSet.size(); j++)
+            {
+                yOutput = getDoubleOutput(Double.parseDouble(ySet.get(j)));
+                forwardStep(xSet.get(j), yOutput);
+                System.out.println("Y: " + yOutput[0]);
+                printNodes(2);
+            }
     }
     
     public static void main(String[] args) {
         // Create a BPNN new objectas
-        BPNN myNN = new BPNN(2,4,2,0.7);
+        BPNN myNN = new BPNN(2,2,1,0.2);
         //readSamples dSet = new readSamples("data/glass.data");
         readSamples dSet = new readSamples("data/and.data");
         dSet.setXYSets();
         //dSet.removeXAttribute(1);
         myNN.numSamples = dSet.getNumSamples();
-        myNN.trainBP(dSet, 10);
+        myNN.trainBP(dSet, 500);
+        myNN.testBP(dSet);
         
         /*BPNN myNN = new BPNN(3,2,1,0.05);
         myNN.printMatrix(myNN.Wih, myNN.nInput, myNN.nHidden);
