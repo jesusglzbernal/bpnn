@@ -52,7 +52,7 @@ public class BPNN {
         this.nHidden = hN;
         this.nOutput = oN;
         this.alpha = learningRate;
-        this.lambda = 0.1;
+        this.lambda = 0.02;
         this.numSamples = 0;
         this.Wih = new double[iN][hN];
         this.Wih = initMatrix(Wih, iN, hN);
@@ -99,7 +99,7 @@ public class BPNN {
         {
             for(j = 0; j < b; j++)
             {
-                matrix[i][j] = nextDouble(r, -0.1, 0.1);
+                matrix[i][j] = nextDouble(r, -0.01, 0.01);
             }
         }
         return matrix;
@@ -211,12 +211,12 @@ public class BPNN {
                     System.out.println("");
                     break;
             case 2: numNodes = this.nOutput;
-                    System.out.println("");
+                    //System.out.println("");
                     for(i = 0; i < numNodes; i++)
                     {
-                        System.out.print(" " + oNodes[i]);
+                        System.out.format("O: %.2f", oNodes[i]);
                     }
-                    System.out.println("");
+                    System.out.println(" ");
                     break;
             default: numNodes = this.nOutput;
         }
@@ -239,7 +239,7 @@ public class BPNN {
     
     private double dsigmoid(double myVal)
     {
-        return 1 - Math.pow(myVal,2);
+        return (double) 1.0 - Math.pow(myVal,2);
     }
     
     
@@ -372,24 +372,6 @@ public class BPNN {
     }
     
 
-    
-    public void changeWeights()
-    {
-        for(int i = 0; i < nHidden; i++)
-        {
-            for(int j = 0; j < nOutput; j++)    
-            {
-                this.Who[i][j] = this.Who[i][j] + this.alpha * this.WhoC[i][j] + this.lambda * this.WhoP[i][j];
-            }
-        }
-        for(int i = 0; i < nInput; i++)
-        {
-            for(int j = 0; j < nHidden; j++)
-            {
-                this.Wih[i][j] = this.Wih[i][j] + this.alpha * this.WihC[i][j] + this.lambda * this.WihP[i][j];
-            }
-        }
-    }
 
     
     // Function to compute a back step
@@ -460,7 +442,7 @@ public class BPNN {
             //copyW();
             //if(i%100 == 0)
             //{
-            System.out.println("Error: " + sumError);
+                System.out.format("Error %d: %.4f\n", i, sumError);
             //}
         }
     }
@@ -477,20 +459,20 @@ public class BPNN {
             {
                 yOutput = getDoubleOutput(Double.parseDouble(ySet.get(j)));
                 forwardStep(xSet.get(j), yOutput);
-                System.out.println("Y: " + yOutput[0]);
+                System.out.format("Y: %.2f\n", yOutput[0]);
                 printNodes(2);
             }
     }
     
     public static void main(String[] args) {
         // Create a BPNN new objectas
-        BPNN myNN = new BPNN(2,2,1,0.2);
+        BPNN myNN = new BPNN(2,2,1,0.4);
         //readSamples dSet = new readSamples("data/glass.data");
         readSamples dSet = new readSamples("data/and.data");
         dSet.setXYSets();
         //dSet.removeXAttribute(1);
         myNN.numSamples = dSet.getNumSamples();
-        myNN.trainBP(dSet, 500);
+        myNN.trainBP(dSet, 200);
         myNN.testBP(dSet);
         
         /*BPNN myNN = new BPNN(3,2,1,0.05);
